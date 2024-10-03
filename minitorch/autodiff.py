@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterable, List, Tuple, Protocol
+from typing import Any, Iterable, Tuple, Protocol
 
 
 # ## Task 1.1
@@ -25,26 +25,43 @@ def central_difference(f: Any, *vals: Any, arg: int = 0, epsilon: float = 1e-6) 
         An approximation of $f'_i(x_0, \ldots, x_{n-1})$
 
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
-
-
-variable_count = 1
+    # basically derivative of f wrt to dimension i at point vals
+    x_vec_high = list(vals)
+    x_vec_low = list(vals)
+    x_vec_high[arg] += epsilon
+    x_vec_low[arg] -= epsilon
+    f_x_vec_high = f(*x_vec_high)
+    f_x_vec_low = f(*x_vec_low)
+    f_prime = (f_x_vec_high - f_x_vec_low) / (2 * epsilon)
+    return f_prime
 
 
 class Variable(Protocol):
-    def accumulate_derivative(self, x: Any) -> None: ...
+    def accumulate_derivative(self, x: Any) -> None:
+        """Accumulate the derivative `x` to the current variable."""
+        ...
 
     @property
-    def unique_id(self) -> int: ...
+    def unique_id(self) -> int:
+        """Return the unique identifier for the variable."""
+        ...
 
-    def is_leaf(self) -> bool: ...
+    def is_leaf(self) -> bool:
+        """Check if the variable is a leaf node."""
+        ...
 
-    def is_constant(self) -> bool: ...
+    def is_constant(self) -> bool:
+        """Check if the variable is constant."""
+        ...
 
     @property
-    def parents(self) -> Iterable["Variable"]: ...
+    def parents(self) -> Iterable["Variable"]:
+        """Return the parent variables of the current variable."""
+        ...
 
-    def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]: ...
+    def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]:
+        """Apply the chain rule to propagate the derivative `d_output` backward."""
+        ...
 
 
 def topological_sort(variable: Variable) -> Iterable[Variable]:
@@ -59,7 +76,20 @@ def topological_sort(variable: Variable) -> Iterable[Variable]:
         Non-constant Variables in topological order starting from the right.
 
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    visited = set()
+    sorted_list = []  # reverse topological order
+
+    def _visit(var: Variable) -> None:
+        if var.unique_id in visited:
+            return
+        for parent in var.parents:
+            _visit(parent)
+        visited.add(var.unique_id)
+        sorted_list.append(var)
+
+    _visit(variable)
+    sorted_list = sorted_list[::-1]
+    return sorted_list
 
 
 def backpropagate(variable: Variable, deriv: Any) -> None:
@@ -68,13 +98,27 @@ def backpropagate(variable: Variable, deriv: Any) -> None:
 
     Args:
     ----
-        variable: The right-most variable
-        deriv  : Its derivative that we want to propagate backward to the leaves.
+    variable: The right-most variable
+    deriv: The derivative of the variable that we want to propagate backward to the leaves.
 
     No return. Should write to its results to the derivative values of each leaf through `accumulate_derivative`.
 
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    topo_order = topological_sort(variable)
+    derivatives = {variable.unique_id: deriv}
+    # Traverse the nodes
+    for var in topo_order:
+        if var.is_leaf():
+            var.accumulate_derivative(derivatives[var.unique_id])
+        else:
+            parent_variables = var.chain_rule(derivatives[var.unique_id])
+            for parent, parent_deriv in parent_variables:
+                # Accumulate derivatives for parent nodes
+                if parent.unique_id in derivatives:
+                    derivatives[parent.unique_id] += parent_deriv
+                else:
+                    derivatives[parent.unique_id] = parent_deriv
+    return
 
 
 @dataclass
@@ -92,4 +136,5 @@ class Context:
 
     @property
     def saved_tensors(self) -> Tuple[Any, ...]:
+        """Return the saved tensors for backpropagation."""
         return self.saved_values
