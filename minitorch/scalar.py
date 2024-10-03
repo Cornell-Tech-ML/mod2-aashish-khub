@@ -169,14 +169,8 @@ class Scalar:
         assert h is not None
         assert h.last_fn is not None
         assert h.ctx is not None
-        derivatives_list = []
-        latest_backward_value = h.last_fn._backward(h.ctx, d_output)
-        if not isinstance(latest_backward_value, tuple):
-            latest_backward_value = (latest_backward_value,)
-        for i, parent in enumerate(h.inputs):
-            if not parent.is_constant():
-                derivatives_list.append((parent, latest_backward_value[i]))
-        return derivatives_list
+        x = h.last_fn._backward(h.ctx, d_output)
+        return zip(h.inputs, x)
 
     def backward(self, d_output: Optional[float] = None) -> None:
         """Calls autodiff to fill in the derivatives for the history of this object.

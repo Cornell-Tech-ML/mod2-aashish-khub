@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterable, Tuple, Protocol
+from typing import Any, Iterable, List, Tuple, Protocol
 
 
 # ## Task 1.1
@@ -77,18 +77,19 @@ def topological_sort(variable: Variable) -> Iterable[Variable]:
 
     """
     visited = set()
-    sorted_list = []  # reverse topological order
+    sorted_list: List[Variable] = []
 
     def _visit(var: Variable) -> None:
-        if var.unique_id in visited:
+        if var.unique_id in visited or var.is_constant():
             return
-        for parent in var.parents:
-            _visit(parent)
+        if not var.is_leaf():
+            for parent in var.parents:
+                if not parent.is_constant():
+                    _visit(parent)
         visited.add(var.unique_id)
-        sorted_list.append(var)
+        sorted_list.insert(0, var)
 
     _visit(variable)
-    sorted_list = sorted_list[::-1]
     return sorted_list
 
 
@@ -108,16 +109,17 @@ def backpropagate(variable: Variable, deriv: Any) -> None:
     derivatives = {variable.unique_id: deriv}
     # Traverse the nodes
     for var in topo_order:
+        deriv = derivatives[var.unique_id]
         if var.is_leaf():
             var.accumulate_derivative(derivatives[var.unique_id])
         else:
             parent_variables = var.chain_rule(derivatives[var.unique_id])
             for parent, parent_deriv in parent_variables:
                 # Accumulate derivatives for parent nodes
-                if parent.unique_id in derivatives:
-                    derivatives[parent.unique_id] += parent_deriv
-                else:
-                    derivatives[parent.unique_id] = parent_deriv
+                if parent.is_constant():
+                    continue
+                derivatives.setdefault(parent.unique_id, 0.0)
+                derivatives[parent.unique_id] += parent_deriv
     return
 
 
