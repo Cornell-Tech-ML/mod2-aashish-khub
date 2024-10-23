@@ -621,7 +621,7 @@ Time Per Epoch: 0.352 s
 
 ### Screenshot of results & loss graph
 ```markdown
-¯\___(ツ)___/¯ 
+¯\___(ツ)___/¯
 ```
 ![spiral_plot](assets/spiral.png)
 ### Logs
